@@ -1,0 +1,1772 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#05070a">
+<title>F11 ради Ильдара — Пропавшая пара</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{width:100%;height:100%;overflow:hidden;background:#05070a;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    color:#e8eef5;user-select:none;-webkit-user-select:none;touch-action:none;}
+  canvas{display:block;position:fixed;inset:0;width:100%;height:100%;}
+  .overlay{position:fixed;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;z-index:100;
+    background:radial-gradient(ellipse at center,#0b1018 0%,#030508 100%);
+    transition:opacity .8s ease;padding:24px;text-align:center;}
+  .overlay.hidden{opacity:0;pointer-events:none;}
+  #loading .logo{font-size:13px;letter-spacing:6px;color:#4a6b8a;margin-bottom:6px;text-transform:uppercase;font-weight:600;}
+  #loading .team{font-size:26px;letter-spacing:2px;font-weight:800;margin-bottom:4px;
+    background:linear-gradient(90deg,#4fa8ff,#a0e0ff,#4fa8ff);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    text-shadow:0 0 40px rgba(79,168,255,.35);}
+  #loading .build{font-size:11px;color:#3d556b;letter-spacing:3px;margin-bottom:34px;}
+  .barwrap{width:min(340px,80vw);height:4px;background:#111a24;border-radius:4px;overflow:hidden;box-shadow:inset 0 0 8px rgba(0,0,0,.8);}
+  #bar{height:100%;width:0%;border-radius:4px;background:linear-gradient(90deg,#2b7fff,#7fd4ff);box-shadow:0 0 14px rgba(79,168,255,.8);}
+  #loadtext{margin-top:12px;font-size:11px;color:#5a7590;letter-spacing:2px;font-variant-numeric:tabular-nums;}
+  #loadhint{margin-top:26px;font-size:10px;color:#2e3f4f;letter-spacing:2px;max-width:300px;line-height:1.7;min-height:34px;}
+  #title .t1{font-size:12px;letter-spacing:8px;color:#48627a;margin-bottom:18px;}
+  #title .t2{font-size:clamp(26px,7vw,44px);font-weight:800;letter-spacing:1px;line-height:1.15;
+    background:linear-gradient(180deg,#ffffff,#7fa8c8);-webkit-background-clip:text;background-clip:text;
+    color:transparent;margin-bottom:10px;}
+  #title .t3{font-size:clamp(11px,3vw,14px);color:#6d8aa4;letter-spacing:3px;margin-bottom:46px;max-width:560px;line-height:1.8;}
+  .btn{padding:15px 46px;border:1px solid rgba(90,160,230,.4);border-radius:2px;
+    background:linear-gradient(180deg,rgba(30,70,120,.5),rgba(12,26,44,.5));
+    color:#cfe6ff;font-size:13px;letter-spacing:4px;font-weight:600;cursor:pointer;
+    transition:all .25s;backdrop-filter:blur(6px);text-transform:uppercase;}
+  .btn:active{transform:scale(.96);background:rgba(40,90,150,.7);}
+  #title .foot{margin-top:34px;font-size:10px;color:#2b3d4d;letter-spacing:2px;}
+  #hud{position:fixed;inset:0;pointer-events:none;z-index:30;opacity:0;transition:opacity .6s;}
+  #hud.on{opacity:1;}
+  #objective{position:absolute;top:calc(env(safe-area-inset-top,0px) + 16px);left:50%;transform:translateX(-50%);
+    font-size:12px;letter-spacing:1.5px;color:#cfe2f5;background:rgba(5,10,16,.55);
+    padding:9px 20px;border-left:2px solid #2b7fff;border-radius:2px;
+    backdrop-filter:blur(8px);max-width:88vw;text-align:center;line-height:1.5;
+    box-shadow:0 4px 24px rgba(0,0,0,.6);transition:opacity .5s;}
+  #cluecount{position:absolute;top:calc(env(safe-area-inset-top,0px) + 16px);right:16px;
+    font-size:11px;letter-spacing:1.5px;color:#8fb8d8;background:rgba(5,10,16,.55);
+    padding:9px 14px;border-radius:2px;backdrop-filter:blur(8px);}
+  #prompt{position:absolute;bottom:34%;left:50%;transform:translateX(-50%);
+    font-size:12px;letter-spacing:2px;color:#eaf4ff;background:rgba(5,10,16,.6);
+    padding:10px 22px;border:1px solid rgba(90,160,230,.35);border-radius:3px;
+    backdrop-filter:blur(8px);opacity:0;transition:opacity .2s;white-space:nowrap;}
+  #prompt.on{opacity:1;}
+  #subtitle{position:absolute;bottom:22%;left:50%;transform:translateX(-50%);
+    width:min(700px,90vw);text-align:center;font-size:clamp(12px,3.4vw,15px);
+    line-height:1.75;color:#dbe9f7;text-shadow:0 2px 12px #000;letter-spacing:.3px;
+    opacity:0;transition:opacity .6s;}
+  #subtitle.on{opacity:1;}
+  #subtitle b{color:#7fb8ff;font-weight:600;}
+  #crosshair{position:fixed;left:50%;top:50%;width:16px;height:16px;margin:-8px 0 0 -8px;
+    z-index:31;pointer-events:none;opacity:0;transition:opacity .5s;}
+  #crosshair.on{opacity:.65;}
+  #crosshair::before,#crosshair::after{content:'';position:absolute;background:#cfe6ff;box-shadow:0 0 4px rgba(0,0,0,.9);}
+  #crosshair::before{left:50%;top:0;width:1.5px;height:100%;margin-left:-.75px;}
+  #crosshair::after{top:50%;left:0;height:1.5px;width:100%;margin-top:-.75px;}
+  #compass{position:fixed;bottom:calc(env(safe-area-inset-bottom,0px) + 16px);
+    left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;
+    z-index:33;pointer-events:none;opacity:0;transition:opacity .4s;}
+  #compass.on{opacity:1;}
+  #compass .ring{position:relative;width:74px;height:74px;border-radius:50%;
+    background:radial-gradient(circle at 50% 50%,rgba(10,20,34,.7),rgba(5,10,18,.85));
+    border:1.5px solid rgba(90,160,230,.35);
+    box-shadow:0 0 22px rgba(60,140,255,.25),inset 0 0 18px rgba(30,80,140,.35);
+    backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;}
+  #compass .ring::before{content:'';position:absolute;inset:8px;border-radius:50%;
+    border:1px dashed rgba(120,180,255,.18);}
+  #compassArrow{width:52px;height:52px;display:flex;align-items:center;justify-content:center;
+    transition:transform .12s linear;filter:drop-shadow(0 0 8px rgba(79,168,255,.85));}
+  #compassArrow svg{width:100%;height:100%;display:block;}
+  #compassLabel{margin-top:7px;font-size:9px;letter-spacing:4px;color:#7fa8c8;
+    text-transform:uppercase;text-shadow:0 1px 6px #000;
+    background:rgba(5,10,16,.55);padding:3px 10px;border-radius:2px;}
+  #compassDistance{position:absolute;bottom:-2px;right:-8px;font-size:9px;letter-spacing:1px;color:#5f7f9f;
+    background:rgba(5,10,16,.7);padding:2px 6px;border-radius:2px;font-variant-numeric:tabular-nums;}
+  #vignette{position:fixed;inset:0;pointer-events:none;z-index:25;
+    background:radial-gradient(ellipse at center,transparent 42%,rgba(0,0,0,.55) 100%);opacity:0;transition:opacity .8s;}
+  #vignette.on{opacity:1;}
+  #damage{position:fixed;inset:0;pointer-events:none;z-index:26;background:#5a0000;opacity:0;transition:opacity .15s;}
+  #joy{position:fixed;width:132px;height:132px;border-radius:50%;
+    background:rgba(120,180,255,.05);border:1.5px solid rgba(120,180,255,.18);
+    z-index:40;display:none;pointer-events:none;box-shadow:inset 0 0 30px rgba(60,140,255,.08);}
+  #joyk{position:absolute;left:50%;top:50%;width:58px;height:58px;margin:-29px 0 0 -29px;
+    border-radius:50%;background:radial-gradient(circle at 35% 30%,rgba(160,210,255,.5),rgba(60,120,200,.3));
+    border:1.5px solid rgba(160,210,255,.45);box-shadow:0 0 20px rgba(80,160,255,.3);}
+  #btnE{position:fixed;right:26px;bottom:calc(env(safe-area-inset-bottom,0px) + 130px);
+    width:88px;height:88px;border-radius:50%;z-index:41;display:none;
+    background:radial-gradient(circle at 35% 30%,rgba(90,170,255,.35),rgba(20,50,90,.5));
+    border:1.5px solid rgba(120,190,255,.45);color:#dceeff;
+    font-size:11px;letter-spacing:2px;font-weight:700;
+    box-shadow:0 0 26px rgba(60,140,255,.25);backdrop-filter:blur(6px);
+    transition:transform .1s,opacity .2s;opacity:0;pointer-events:none;}
+  #btnE.on{opacity:1;pointer-events:auto;}
+  #btnE:active{transform:scale(.9);background:rgba(80,160,255,.5);}
+  #carControls{position:fixed;inset:0;pointer-events:none;z-index:38;opacity:0;transition:opacity .4s;}
+  #carControls.on{opacity:1;}
+  .cbtn{position:absolute;display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(circle at 35% 30%,rgba(90,170,255,.4),rgba(20,50,90,.65));
+    border:1.5px solid rgba(120,190,255,.55);color:#dceeff;
+    font-weight:800;backdrop-filter:blur(6px);
+    box-shadow:0 0 22px rgba(60,140,255,.35);
+    transition:transform .1s,background .15s;touch-action:none;
+    pointer-events:none;font-family:inherit;cursor:pointer;}
+  #carControls.on .cbtn{pointer-events:auto;}
+  .cbtn.held,.cbtn:active{transform:scale(.92);
+    background:radial-gradient(circle at 35% 30%,rgba(140,210,255,.75),rgba(40,100,180,.8));
+    box-shadow:0 0 32px rgba(120,200,255,.6);}
+  #carLeft{left:24px;bottom:calc(env(safe-area-inset-bottom,0px) + 26px);width:88px;height:88px;border-radius:50%;font-size:32px;line-height:1;}
+  #carRight{left:128px;bottom:calc(env(safe-area-inset-bottom,0px) + 26px);width:88px;height:88px;border-radius:50%;font-size:32px;line-height:1;}
+  #carGas{right:24px;bottom:calc(env(safe-area-inset-bottom,0px) + 26px);width:104px;height:104px;border-radius:50%;font-size:12px;letter-spacing:2px;}
+  #carBrake{right:144px;bottom:calc(env(safe-area-inset-bottom,0px) + 26px);width:88px;height:88px;border-radius:50%;font-size:10px;letter-spacing:1px;}
+  #carSpeed{position:fixed;top:calc(env(safe-area-inset-top,0px) + 60px);right:20px;
+    font-size:12px;letter-spacing:2px;color:#8fb8d8;background:rgba(5,10,16,.65);
+    padding:6px 12px;border-radius:2px;border-left:2px solid #2b7fff;
+    font-variant-numeric:tabular-nums;opacity:0;transition:opacity .4s;z-index:39;pointer-events:none;}
+  #carSpeed.on{opacity:1;}
+  #carTimer{position:fixed;top:calc(env(safe-area-inset-top,0px) + 16px);left:50%;transform:translateX(-50%);
+    font-size:12px;letter-spacing:2px;color:#ffb870;background:rgba(5,10,16,.7);
+    padding:6px 16px;border-radius:2px;border-left:2px solid #ff8833;
+    font-variant-numeric:tabular-nums;opacity:0;transition:opacity .4s;z-index:39;pointer-events:none;}
+  #carTimer.on{opacity:1;}
+  #end .e1{font-size:clamp(20px,6vw,34px);font-weight:800;letter-spacing:2px;
+    background:linear-gradient(180deg,#fff,#88a8c8);-webkit-background-clip:text;background-clip:text;
+    color:transparent;margin-bottom:18px;}
+  #end .e2{font-size:13px;color:#7d97ae;letter-spacing:1.5px;line-height:2;max-width:600px;margin-bottom:38px;}
+  #end .e2 b{color:#ff8899;font-weight:700;letter-spacing:2px;}
+  #fade{position:fixed;inset:0;background:#000;z-index:90;opacity:0;pointer-events:none;transition:opacity 1.2s ease;}
+  #fade.on{opacity:1;}
+  .hint{font-size:10px;color:#3a5064;letter-spacing:2px;margin-top:18px;line-height:1.8;}
+</style>
+</head>
+<body>
+
+<div id="loading" class="overlay">
+  <div class="logo">сборка</div>
+  <div class="team">F11 ради Ильдара</div>
+  <div class="build">1i0_1.0.0</div>
+  <div class="barwrap"><div id="bar"></div></div>
+  <div id="loadtext">0,0 MB / 56,0 MB</div>
+  <div id="loadhint">инициализация…</div>
+</div>
+
+<div id="title" class="overlay hidden">
+  <div class="t1">F11 РАДИ ИЛЬДАРА · 1i0_1.0.0</div>
+  <div class="t2">ПРОПАВШАЯ ПАРА</div>
+  <div class="t3">
+    Меня отправили в лес, чтобы найти зацепки о пропаже супружеской пары.
+    Они должны были вернуться ещё три дня назад.
+  </div>
+  <button class="btn" id="startBtn">НАЧАТЬ</button>
+  <div class="foot">НАУШНИКИ РЕКОМЕНДУЮТСЯ · 15 МИНУТ</div>
+</div>
+
+<div id="hud">
+  <div id="objective"></div>
+  <div id="cluecount"></div>
+  <div id="prompt"></div>
+  <div id="subtitle"></div>
+</div>
+<div id="crosshair"></div>
+<div id="vignette"></div>
+<div id="damage"></div>
+<div id="fade"></div>
+
+<div id="compass">
+  <div class="ring">
+    <div id="compassArrow">
+      <svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="30,4 48,50 30,40 12,50" fill="#4fa8ff" stroke="#a0e0ff" stroke-width="2.5" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div id="compassDistance">0 м</div>
+  </div>
+  <div id="compassLabel">ЦЕЛЬ</div>
+</div>
+
+<div id="joy"><div id="joyk"></div></div>
+<button id="btnE">E</button>
+
+<div id="carControls">
+  <button class="cbtn" id="carLeft">◀</button>
+  <button class="cbtn" id="carRight">▶</button>
+  <button class="cbtn" id="carGas">ГАЗ</button>
+  <button class="cbtn" id="carBrake">ТОРМОЗ</button>
+</div>
+<div id="carSpeed">0 КМ/Ч</div>
+<div id="carTimer">ЧЕРЕЗ 5.0…</div>
+
+<div id="end" class="overlay hidden">
+  <div class="e1">КОНЕЦ ПЕРВОЙ ЧАСТИ</div>
+  <div class="e2" id="endText"></div>
+  <button class="btn" id="restartBtn">ЗАНОВО</button>
+  <div class="hint">F11 ради Ильдара · сборка 1i0_1.0.0</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* ============================================================================
+   F11 ради Ильдара — "Пропавшая пара" · сборка 1i0_1.0.0
+   ============================================================================ */
+(function () {
+'use strict';
+
+const $  = id => document.getElementById(id);
+const clamp = (v, a, b) => v < a ? a : (v > b ? b : v);
+const lerp  = (a, b, t) => a + (b - a) * t;
+const rnd   = (a, b) => a + Math.random() * (b - a);
+const rndi  = (a, b) => Math.floor(rnd(a, b + 1));
+const TAU   = Math.PI * 2;
+
+const IS_TOUCH = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+
+/* ---------------------------------------------------------------------------
+   ПОЛНОЭКРАННЫЙ РЕЖИМ
+   --------------------------------------------------------------------------- */
+function enterFullscreen() {
+  const el = document.documentElement;
+  const rfs = el.requestFullscreen || el.webkitRequestFullscreen ||
+              el.mozRequestFullScreen || el.msRequestFullscreen;
+  if (!rfs) { tryLockOrientation(); return; }
+  const res = rfs.call(el, { navigationUI: 'hide' });
+  if (res && res.then) res.then(tryLockOrientation).catch(tryLockOrientation);
+  else setTimeout(tryLockOrientation, 120);
+}
+function tryLockOrientation() {
+  try {
+    if (screen.orientation && screen.orientation.lock) {
+      const p = screen.orientation.lock('landscape');
+      if (p && p.catch) p.catch(() => {});
+    }
+  } catch (e) {}
+}
+document.addEventListener('fullscreenchange', () => {
+  if (document.fullscreenElement) { tryLockOrientation(); setTimeout(onResize, 80); }
+});
+document.addEventListener('webkitfullscreenchange', () => {
+  if (document.webkitFullscreenElement) setTimeout(onResize, 80);
+});
+
+/* ---------------------------------------------------------------------------
+   СОСТОЯНИЕ
+   --------------------------------------------------------------------------- */
+let renderer, scene, camera, clock;
+let currentLevel = null;
+let gameMode = 'load';
+
+const player = {
+  pos: new THREE.Vector3(0, 1.7, 0),
+  yaw: 0, pitch: 0,
+  vel: new THREE.Vector3(),
+  height: 1.7, eyeBob: 0, walking: false, speed: 5.4
+};
+
+const keys = Object.create(null);
+const joy  = { id: null, ox: 0, oy: 0, x: 0, y: 0, active: false };
+const look = { id: null, lx: 0, ly: 0, active: false };
+
+let interactQueued = false;
+const carBtns = { left: false, right: false, gas: false, brake: false };
+
+/* ---------------------------------------------------------------------------
+   СБРОС ВВОДА
+   --------------------------------------------------------------------------- */
+function resetInputState() {
+  for (const k in keys) keys[k] = false;
+  joy.id = null; joy.x = 0; joy.y = 0; joy.active = false;
+  joy.ox = joy.oy = 0;
+  const joyEl = $('joy');
+  if (joyEl) joyEl.style.display = 'none';
+  const joyK = $('joyk');
+  if (joyK) joyK.style.transform = 'translate(0,0)';
+
+  look.id = null; look.active = false;
+  look.lx = look.ly = 0;
+
+  carBtns.left = carBtns.right = carBtns.gas = carBtns.brake = false;
+  document.querySelectorAll('.cbtn').forEach(b => b.classList.remove('held'));
+
+  interactQueued = false;
+}
+
+/* ---------------------------------------------------------------------------
+   ИНИЦИАЛИЗАЦИЯ
+   --------------------------------------------------------------------------- */
+function initEngine() {
+  renderer = new THREE.WebGLRenderer({
+    antialias: true, powerPreference: 'high-performance',
+    stencil: false, alpha: false
+  });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.05;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.setClearColor(0x05070a, 1);
+  document.body.appendChild(renderer.domElement);
+
+  camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.08, 600);
+  camera.rotation.order = 'YXZ';
+
+  scene = new THREE.Scene();
+  clock = new THREE.Clock();
+
+  window.addEventListener('resize', onResize);
+  window.addEventListener('orientationchange', () => setTimeout(onResize, 260));
+}
+
+function onResize() {
+  const w = window.innerWidth, h = window.innerHeight;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+}
+
+/* ---------------------------------------------------------------------------
+   КОМПАС
+   --------------------------------------------------------------------------- */
+const Compass = {
+  el:  $('compass'),
+  arr: $('compassArrow'),
+  dist: $('compassDistance'),
+  label: $('compassLabel'),
+  _visible: false,
+  hide() {
+    if (this._visible) { this.el.classList.remove('on'); this._visible = false; }
+  },
+  show(label) {
+    if (!this._visible) { this.el.classList.add('on'); this._visible = true; }
+    if (label) this.label.textContent = label;
+  },
+  point(tx, tz, label) {
+    const dx = tx - player.pos.x;
+    const dz = tz - player.pos.z;
+    const dist = Math.hypot(dx, dz);
+    if (dist < 0.6) { this.hide(); return; }
+    const cosY = Math.cos(player.yaw), sinY = Math.sin(player.yaw);
+    const sx = dx * cosY - dz * sinY;
+    const sz = dx * sinY + dz * cosY;
+    const angle = Math.atan2(sx, -sz);
+    this.arr.style.transform = `rotate(${angle}rad)`;
+    this.dist.textContent = dist < 1000 ? Math.round(dist) + ' м'
+                                        : (dist / 1000).toFixed(1) + ' км';
+    this.show(label || 'ЦЕЛЬ');
+  }
+};
+
+/* ---------------------------------------------------------------------------
+   УПРАВЛЕНИЕ
+   --------------------------------------------------------------------------- */
+function bindControls() {
+  window.addEventListener('keydown', e => {
+    keys[e.code] = true;
+    if (e.code === 'KeyE') interactQueued = true;
+    if (e.code === 'Space') e.preventDefault();
+  });
+  window.addEventListener('keyup', e => { keys[e.code] = false; });
+
+  window.addEventListener('blur', () => {
+    for (const k in keys) keys[k] = false;
+    carBtns.left = carBtns.right = carBtns.gas = carBtns.brake = false;
+    document.querySelectorAll('.cbtn').forEach(b => b.classList.remove('held'));
+  });
+
+  renderer.domElement.addEventListener('click', () => {
+    if (!IS_TOUCH && gameMode === 'play' && !document.pointerLockElement) {
+      try { renderer.domElement.requestPointerLock(); } catch (e) {}
+    }
+  });
+  document.addEventListener('mousemove', e => {
+    if (document.pointerLockElement === renderer.domElement) {
+      player.yaw   -= e.movementX * 0.0022;
+      player.pitch -= e.movementY * 0.0022;
+      player.pitch = clamp(player.pitch, -1.45, 1.45);
+    }
+  });
+
+  const joyEl = $('joy');
+  const joyK  = $('joyk');
+  const btnE  = $('btnE');
+  const JOY_R = 52;
+
+  function placeJoy(x, y) {
+    joyEl.style.left = (x - 66) + 'px';
+    joyEl.style.top  = (y - 66) + 'px';
+    joyEl.style.display = 'block';
+    joyK.style.transform = 'translate(0,0)';
+  }
+
+  document.addEventListener('touchstart', e => {
+    if (gameMode !== 'play') return;
+    if (currentLevel && currentLevel.getDriving && currentLevel.getDriving()) return;
+    for (const t of e.changedTouches) {
+      const w = window.innerWidth;
+      if (t.clientX < w * 0.5 && joy.id === null) {
+        joy.id = t.identifier;
+        joy.ox = t.clientX; joy.oy = t.clientY;
+        joy.x = 0; joy.y = 0; joy.active = true;
+        placeJoy(t.clientX, t.clientY);
+      } else if (t.clientX >= w * 0.5 && look.id === null) {
+        look.id = t.identifier;
+        look.lx = t.clientX; look.ly = t.clientY;
+        look.active = true;
+      }
+    }
+  }, { passive: true });
+
+  document.addEventListener('touchmove', e => {
+    if (gameMode !== 'play') return;
+    for (const t of e.changedTouches) {
+      if (t.identifier === joy.id) {
+        let dx = t.clientX - joy.ox, dy = t.clientY - joy.oy;
+        const d = Math.hypot(dx, dy);
+        if (d > JOY_R) { dx = dx / d * JOY_R; dy = dy / d * JOY_R; }
+        joyK.style.transform = `translate(${dx}px,${dy}px)`;
+        joy.x = dx / JOY_R; joy.y = dy / JOY_R;
+      } else if (t.identifier === look.id) {
+        const dx = t.clientX - look.lx, dy = t.clientY - look.ly;
+        player.yaw   -= dx * 0.0055;
+        player.pitch -= dy * 0.0055;
+        player.pitch = clamp(player.pitch, -1.45, 1.45);
+        look.lx = t.clientX; look.ly = t.clientY;
+      }
+    }
+  }, { passive: true });
+
+  const endTouch = e => {
+    for (const t of e.changedTouches) {
+      if (t.identifier === joy.id) {
+        joy.id = null; joy.x = 0; joy.y = 0; joy.active = false;
+        joyEl.style.display = 'none';
+      }
+      if (t.identifier === look.id) { look.id = null; look.active = false; }
+    }
+  };
+  document.addEventListener('touchend', endTouch, { passive: true });
+  document.addEventListener('touchcancel', endTouch, { passive: true });
+
+  btnE.addEventListener('touchstart', e => {
+    e.stopPropagation(); e.preventDefault();
+    interactQueued = true;
+  }, { passive: false });
+  btnE.addEventListener('touchend', e => { e.stopPropagation(); }, { passive: true });
+  btnE.addEventListener('click', e => {
+    e.stopPropagation(); e.preventDefault();
+    interactQueued = true;
+  });
+
+  function bindCarBtn(id, key) {
+    const el = $(id);
+    const press = e => {
+      e.stopPropagation();
+      if (e.cancelable) e.preventDefault();
+      carBtns[key] = true;
+      el.classList.add('held');
+    };
+    const release = e => {
+      if (e && e.stopPropagation) e.stopPropagation();
+      carBtns[key] = false;
+      el.classList.remove('held');
+    };
+    el.addEventListener('touchstart', press, { passive: false });
+    el.addEventListener('touchend', release, { passive: true });
+    el.addEventListener('touchcancel', release, { passive: true });
+    el.addEventListener('mousedown', press);
+    el.addEventListener('mouseup', release);
+    el.addEventListener('mouseleave', release);
+    el.addEventListener('contextmenu', e => e.preventDefault());
+  }
+  bindCarBtn('carLeft', 'left');
+  bindCarBtn('carRight', 'right');
+  bindCarBtn('carGas', 'gas');
+  bindCarBtn('carBrake', 'brake');
+
+  window.addEventListener('mouseup', () => {
+    carBtns.left = carBtns.right = carBtns.gas = carBtns.brake = false;
+    document.querySelectorAll('.cbtn').forEach(b => b.classList.remove('held'));
+  });
+}
+
+/* ---------------------------------------------------------------------------
+   ГЕОМЕТРИЯ
+   --------------------------------------------------------------------------- */
+function groundH(x, z) {
+  return Math.sin(x * 0.07) * Math.cos(z * 0.07) * 0.95
+       + Math.sin(x * 0.21 + z * 0.13) * 0.36
+       + Math.cos(z * 0.33) * 0.18;
+}
+
+function makeTerrain(size, seg, color) {
+  const geo = new THREE.PlaneGeometry(size, size, seg, seg);
+  const pos = geo.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i), y = pos.getY(i);
+    pos.setZ(i, groundH(x, -y));
+  }
+  geo.computeVertexNormals();
+  const m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color }));
+  m.rotation.x = -Math.PI / 2;
+  m.receiveShadow = true;
+  return m;
+}
+
+function makeTree(scale, tint) {
+  const g = new THREE.Group();
+  const trunkH = 3.6 * scale;
+  const trunk = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.14 * scale, 0.24 * scale, trunkH, 6),
+    new THREE.MeshLambertMaterial({ color: 0x3a2a1c })
+  );
+  trunk.position.y = trunkH / 2; trunk.castShadow = true; g.add(trunk);
+  const col = new THREE.Color().setHSL(tint, 0.42, 0.20 + Math.random() * 0.08);
+  const foliMat = new THREE.MeshLambertMaterial({ color: col });
+  const layers = rndi(2, 3);
+  for (let i = 0; i < layers; i++) {
+    const cone = new THREE.Mesh(
+      new THREE.ConeGeometry((1.9 - i * 0.42) * scale, (2.6 - i * 0.35) * scale, 7),
+      foliMat
+    );
+    cone.position.y = trunkH * 0.62 + i * 1.35 * scale;
+    cone.castShadow = true;
+    cone.rotation.y = Math.random() * TAU;
+    g.add(cone);
+  }
+  return g;
+}
+
+function makeRock(scale) {
+  const geo = new THREE.DodecahedronGeometry(scale, 0);
+  const pos = geo.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    pos.setXYZ(i,
+      pos.getX(i) * rnd(0.75, 1.25),
+      pos.getY(i) * rnd(0.6, 1.0),
+      pos.getZ(i) * rnd(0.75, 1.25));
+  }
+  geo.computeVertexNormals();
+  const m = new THREE.Mesh(geo,
+    new THREE.MeshLambertMaterial({ color: 0x4a4d52, flatShading: true }));
+  m.castShadow = true; m.receiveShadow = true;
+  return m;
+}
+
+function makeBush(scale) {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshLambertMaterial({ color: 0x1f3320, flatShading: true });
+  for (let i = 0; i < 4; i++) {
+    const r = rnd(0.35, 0.7) * scale;
+    const s = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 0), mat);
+    s.position.set(rnd(-0.5, 0.5) * scale, r * 0.7, rnd(-0.5, 0.5) * scale);
+    s.castShadow = true;
+    g.add(s);
+  }
+  return g;
+}
+
+/* ---------------------------------------------------------------------------
+   UI
+   --------------------------------------------------------------------------- */
+const UI = {
+  objective: $('objective'),
+  cluecount: $('cluecount'),
+  prompt:    $('prompt'),
+  subtitle:  $('subtitle'),
+  hud:       $('hud'),
+  crosshair: $('crosshair'),
+  vignette:  $('vignette'),
+  fade:      $('fade'),
+  damage:    $('damage'),
+
+  setObjective(t) { this.objective.textContent = t; this.objective.style.opacity = t ? 1 : 0; },
+  setClues(t)     { this.cluecount.textContent = t; this.cluecount.style.display = t ? 'block' : 'none'; },
+  showPrompt(t)   { if (t) { this.prompt.textContent = t; this.prompt.classList.add('on'); }
+                    else this.prompt.classList.remove('on'); },
+  say(t, ms) {
+    this.subtitle.innerHTML = t;
+    this.subtitle.classList.add('on');
+    clearTimeout(this._sayT);
+    if (ms) this._sayT = setTimeout(() => this.subtitle.classList.remove('on'), ms);
+  },
+  clearSay() { this.subtitle.classList.remove('on'); },
+  fadeIn(ms)  { this.fade.style.transitionDuration = (ms || 1200) + 'ms'; this.fade.classList.add('on'); },
+  fadeOut(ms) { this.fade.style.transitionDuration = (ms || 1200) + 'ms'; this.fade.classList.remove('on'); },
+  flashDamage() {
+    this.damage.style.transition = 'none';
+    this.damage.style.opacity = 0.55;
+    requestAnimationFrame(() => {
+      this.damage.style.transition = 'opacity .8s';
+      this.damage.style.opacity = 0;
+    });
+  },
+  gameplay(on) {
+    this.hud.classList.toggle('on', on);
+    this.crosshair.classList.toggle('on', on);
+    this.vignette.classList.toggle('on', on);
+    const be = $('btnE');
+    be.style.display = (on && IS_TOUCH) ? 'block' : 'none';
+    if (!on) Compass.hide();
+  },
+  carUI(on) {
+    $('carControls').classList.toggle('on', on);
+    $('carSpeed').classList.toggle('on', on);
+    $('carTimer').classList.toggle('on', on);
+    if (!on) {
+      carBtns.left = carBtns.right = carBtns.gas = carBtns.brake = false;
+      document.querySelectorAll('.cbtn').forEach(b => b.classList.remove('held'));
+    }
+  }
+};
+
+/* ---------------------------------------------------------------------------
+   ЗАГРУЗКА 10 СЕКУНД
+   --------------------------------------------------------------------------- */
+function runLoading(onDone) {
+  const bar = $('bar'), txt = $('loadtext'), hint = $('loadhint');
+  const TOTAL_MB = 56, DURATION = 10000;
+  const stages = [
+    { at: 0.00, text: 'инициализация WebGL…' },
+    { at: 0.08, text: 'генерация рельефа леса…' },
+    { at: 0.20, text: 'высадка деревьев…' },
+    { at: 0.34, text: 'загрузка текстур высокого разрешения…' },
+    { at: 0.48, text: 'компиляция шейдеров…' },
+    { at: 0.60, text: 'расстановка зацепок…' },
+    { at: 0.72, text: 'подготовка сцены аварии…' },
+    { at: 0.83, text: 'интерьер дома…' },
+    { at: 0.92, text: 'оптимизация буферов…' },
+    { at: 0.98, text: 'готово.' }
+  ];
+  const startTime = performance.now();
+  let lastStage = -1, lastMb = 0;
+  function tick() {
+    const elapsed = performance.now() - startTime;
+    let t = elapsed / DURATION; if (t > 1) t = 1;
+    const eased = t < 1
+      ? (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2) * 0.85 + t * 0.15
+      : 1;
+    const progress = Math.min(eased, 1);
+    const mb = Math.max(lastMb, TOTAL_MB * progress);
+    lastMb = mb;
+    bar.style.width = (progress * 100).toFixed(2) + '%';
+    txt.textContent = mb.toFixed(1).replace('.', ',') + ' MB / ' +
+                      TOTAL_MB.toFixed(1).replace('.', ',') + ' MB';
+    for (let i = stages.length - 1; i >= 0; i--) {
+      if (progress >= stages[i].at) {
+        if (lastStage !== i) { lastStage = i; hint.innerHTML = stages[i].text; }
+        break;
+      }
+    }
+    if (t < 1) requestAnimationFrame(tick);
+    else {
+      bar.style.width = '100%';
+      txt.textContent = '56,0 MB / 56,0 MB';
+      hint.innerHTML = 'готово.';
+      setTimeout(() => {
+        $('loading').classList.add('hidden');
+        $('title').classList.remove('hidden');
+        if (onDone) onDone();
+      }, 420);
+    }
+  }
+  requestAnimationFrame(tick);
+}
+
+/* ---------------------------------------------------------------------------
+   ДВИЖЕНИЕ ПЕШКОМ
+   --------------------------------------------------------------------------- */
+function updatePlayerMovement(dt, opts) {
+  opts = opts || {};
+  const locked = !!opts.locked;
+
+  let ix = 0, iz = 0;
+  if (!locked) {
+    if (keys['KeyW'] || keys['ArrowUp'])    iz -= 1;
+    if (keys['KeyS'] || keys['ArrowDown'])  iz += 1;
+    if (keys['KeyA'] || keys['ArrowLeft'])  ix -= 1;
+    if (keys['KeyD'] || keys['ArrowRight']) ix += 1;
+    if (joy.active) { ix += joy.x; iz += joy.y; }
+  }
+  const len = Math.hypot(ix, iz);
+  if (len > 1) { ix /= len; iz /= len; }
+
+  const moving = (Math.abs(ix) > 0.08 || Math.abs(iz) > 0.08);
+  player.walking = moving;
+
+  const targetSpeed = player.speed * (keys['ShiftLeft'] ? 1.55 : 1);
+  const sinY = Math.sin(player.yaw), cosY = Math.cos(player.yaw);
+
+  const wishX = ( ix * cosY + iz * sinY) * targetSpeed;
+  const wishZ = (-ix * sinY + iz * cosY) * targetSpeed;
+
+  const accel = moving ? 14 : 11;
+  player.vel.x = lerp(player.vel.x, wishX, clamp(accel * dt, 0, 1));
+  player.vel.z = lerp(player.vel.z, wishZ, clamp(accel * dt, 0, 1));
+
+  let nx = player.pos.x + player.vel.x * dt;
+  let nz = player.pos.z + player.vel.z * dt;
+
+  if (opts.collide) {
+    const r = opts.collide(nx, nz);
+    nx = r.x; nz = r.z;
+  }
+  player.pos.x = nx;
+  player.pos.z = nz;
+
+  if (opts.floorY) {
+    player.pos.y = lerp(player.pos.y, opts.floorY(nx, nz) + player.height, clamp(dt * 14, 0, 1));
+  }
+
+  const spd = Math.hypot(player.vel.x, player.vel.z);
+  player.eyeBob += dt * spd * 1.65;
+  const bob  = Math.sin(player.eyeBob) * Math.min(spd / 6, 1) * 0.045;
+  const sway = Math.cos(player.eyeBob * 0.5) * Math.min(spd / 6, 1) * 0.012;
+
+  camera.position.set(player.pos.x, player.pos.y + bob, player.pos.z);
+  camera.rotation.set(player.pitch, player.yaw, sway);
+}
+
+/* ---------------------------------------------------------------------------
+   ОЧИСТКА СЦЕНЫ
+   --------------------------------------------------------------------------- */
+function clearScene() {
+  const toRemove = [];
+  scene.traverse(o => { if (o !== scene) toRemove.push(o); });
+  toRemove.forEach(o => {
+    if (o.geometry) o.geometry.dispose();
+    if (o.material) {
+      if (Array.isArray(o.material)) o.material.forEach(m => m.dispose());
+      else o.material.dispose();
+    }
+    if (o.parent) o.parent.remove(o);
+  });
+  scene.fog = null;
+  scene.background = null;
+}
+
+/* ===========================================================================
+   УРОВЕНЬ 1 — ЛЕС (с режимом вождения)
+   =========================================================================== */
+function buildForestLevel() {
+  clearScene();
+
+  const fogCol = 0x101a20;
+  scene.fog = new THREE.FogExp2(fogCol, 0.0165);
+  scene.background = new THREE.Color(fogCol);
+
+  scene.add(new THREE.HemisphereLight(0x5f7f9f, 0x14100c, 0.55));
+
+  const moon = new THREE.DirectionalLight(0x9fc4e8, 0.85);
+  moon.position.set(-30, 48, 22);
+  moon.castShadow = true;
+  moon.shadow.mapSize.set(1024, 1024);
+  moon.shadow.camera.near = 1;
+  moon.shadow.camera.far = 140;
+  moon.shadow.camera.left = -40;
+  moon.shadow.camera.right = 40;
+  moon.shadow.camera.top = 40;
+  moon.shadow.camera.bottom = -40;
+  moon.shadow.bias = -0.0012;
+  scene.add(moon); scene.add(moon.target);
+
+  scene.add(new THREE.AmbientLight(0x25384a, 0.42));
+  scene.add(makeTerrain(320, 90, 0x1d2a1c));
+
+  /* Тропа */
+  const pathGeo = new THREE.PlaneGeometry(6, 130, 1, 40);
+  const pathPos = pathGeo.attributes.position;
+  for (let i = 0; i < pathPos.count; i++) {
+    pathPos.setZ(i, groundH(pathPos.getX(i), -pathPos.getY(i)) + 0.05);
+  }
+  pathGeo.computeVertexNormals();
+  const pathMesh = new THREE.Mesh(pathGeo, new THREE.MeshLambertMaterial({ color: 0x3a3527 }));
+  pathMesh.rotation.x = -Math.PI / 2;
+  pathMesh.position.set(0, 0, -6);
+  pathMesh.receiveShadow = true;
+  scene.add(pathMesh);
+
+  /* Деревья */
+  const TREE_COUNT = 190;
+  const trunkInst = new THREE.InstancedMesh(
+    new THREE.CylinderGeometry(0.16, 0.28, 4.2, 6),
+    new THREE.MeshLambertMaterial({ color: 0x362618 }),
+    TREE_COUNT
+  );
+  trunkInst.castShadow = true; trunkInst.receiveShadow = true;
+
+  const foliInst = new THREE.InstancedMesh(
+    new THREE.ConeGeometry(1.8, 3.4, 7),
+    new THREE.MeshLambertMaterial({ color: 0x1c2e1d, flatShading: true }),
+    TREE_COUNT * 2
+  );
+  foliInst.castShadow = true;
+
+  const dummy = new THREE.Object3D();
+  const treePositions = [];
+  let ti = 0, fi = 0;
+
+  const reserved = [
+    { x: 0, z: 25, r: 9 }, { x: 0, z: 34, r: 9 },
+    { x: -38, z: -34, r: 7 }, { x: 34, z: -22, r: 7 },
+    { x: 4, z: -74, r: 7 }, { x: 0, z: -6, r: 5 }
+  ];
+
+  let guard = 0;
+  while (ti < TREE_COUNT && guard < 6000) {
+    guard++;
+    const x = rnd(-125, 125), z = rnd(-125, 90);
+    if (Math.abs(x) < 4.5 && z > -80 && z < 60) continue;
+    let bad = false;
+    for (const r of reserved) if (Math.hypot(x - r.x, z - r.z) < r.r) { bad = true; break; }
+    if (bad) continue;
+    const s = rnd(0.75, 1.6);
+    const y = groundH(x, z);
+    dummy.position.set(x, y + 2.1 * s, z);
+    dummy.rotation.set(0, Math.random() * TAU, 0);
+    dummy.scale.set(s, s, s);
+    dummy.updateMatrix();
+    trunkInst.setMatrixAt(ti, dummy.matrix);
+    treePositions.push({ x, z, r: 0.55 * s });
+    ti++;
+    for (let k = 0; k < 2; k++) {
+      const fs = s * (1 - k * 0.35);
+      dummy.position.set(x, y + (4.0 + k * 2.6) * s, z);
+      dummy.rotation.set(0, Math.random() * TAU, 0);
+      dummy.scale.set(fs, fs, fs);
+      dummy.updateMatrix();
+      if (fi < TREE_COUNT * 2) foliInst.setMatrixAt(fi++, dummy.matrix);
+    }
+  }
+  trunkInst.count = ti; foliInst.count = fi;
+  trunkInst.instanceMatrix.needsUpdate = true;
+  foliInst.instanceMatrix.needsUpdate = true;
+  scene.add(trunkInst); scene.add(foliInst);
+
+  for (let i = 0; i < 34; i++) {
+    const x = rnd(-110, 110), z = rnd(-110, 80);
+    if (Math.abs(x) < 5 && z > -80 && z < 60) continue;
+    const s = rnd(0.35, 1.4);
+    const rock = makeRock(s);
+    rock.position.set(x, groundH(x, z) + s * 0.4, z);
+    rock.rotation.set(rnd(0, 1), rnd(0, TAU), rnd(0, 1));
+    scene.add(rock);
+  }
+  for (let i = 0; i < 48; i++) {
+    const x = rnd(-110, 110), z = rnd(-110, 80);
+    if (Math.abs(x) < 4 && z > -80 && z < 60) continue;
+    const b = makeBush(rnd(0.8, 1.5));
+    b.position.set(x, groundH(x, z), z);
+    scene.add(b);
+  }
+
+  /* Улики */
+  const CLUES = [
+    { id: 'shoe',  label: 'Кроссовок',        pos: new THREE.Vector3(-38, 0, -34), color: 0xffaa33 },
+    { id: 'phone', label: 'Разбитый телефон', pos: new THREE.Vector3( 34, 0, -22), color: 0x33ddff },
+    { id: 'cloth', label: 'Обрывок ткани',    pos: new THREE.Vector3(  4, 0, -74), color: 0xff4488 }
+  ];
+  const clueObjects = [];
+
+  CLUES.forEach((c, idx) => {
+    const g = new THREE.Group();
+    const y = groundH(c.pos.x, c.pos.z);
+    let item;
+    if (c.id === 'shoe') {
+      item = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.16, 0.72),
+        new THREE.MeshLambertMaterial({ color: 0x2b2b30 }));
+      item.position.y = 0.10;
+      const sole = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.05, 0.74),
+        new THREE.MeshLambertMaterial({ color: 0x111114 }));
+      sole.position.y = -0.08; item.add(sole);
+    } else if (c.id === 'phone') {
+      item = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.03, 0.6),
+        new THREE.MeshPhongMaterial({ color: 0x0d0d12, shininess: 90 }));
+      item.position.y = 0.06;
+      const scr = new THREE.Mesh(new THREE.PlaneGeometry(0.26, 0.54),
+        new THREE.MeshBasicMaterial({ color: 0x2266aa }));
+      scr.rotation.x = -Math.PI / 2; scr.position.y = 0.017; item.add(scr);
+    } else {
+      item = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 0.4),
+        new THREE.MeshLambertMaterial({ color: 0x7a2233 }));
+      item.rotation.x = -Math.PI / 2; item.rotation.z = rnd(0, TAU);
+      item.position.y = 0.06;
+    }
+    item.castShadow = true; g.add(item);
+
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(0.75, 1.05, 24),
+      new THREE.MeshBasicMaterial({
+        color: c.color, transparent: true, opacity: 0.45,
+        side: THREE.DoubleSide, depthWrite: false
+      })
+    );
+    ring.rotation.x = -Math.PI / 2; ring.position.y = 0.04; g.add(ring);
+
+    const beam = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.5, 1.0, 5, 12, 1, true),
+      new THREE.MeshBasicMaterial({
+        color: c.color, transparent: true, opacity: 0.09,
+        depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending
+      })
+    );
+    beam.position.y = 2.5; g.add(beam);
+
+    const pl = new THREE.PointLight(c.color, 0.85, 8, 2);
+    pl.position.y = 1.0; g.add(pl);
+
+    g.position.set(c.pos.x, y, c.pos.z);
+    scene.add(g);
+    clueObjects.push({ data: c, group: g, ring, beam, pl, collected: false, idx });
+  });
+
+  /* Машина */
+  const carMesh = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.75, 4.4),
+    new THREE.MeshPhongMaterial({ color: 0x152438, shininess: 70 }));
+  body.position.y = 0.75; body.castShadow = true; carMesh.add(body);
+
+  const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.65, 2.1),
+    new THREE.MeshPhongMaterial({ color: 0x0d1725, shininess: 100 }));
+  cabin.position.set(0, 1.42, -0.15); cabin.castShadow = true; carMesh.add(cabin);
+
+  const glassMat = new THREE.MeshPhongMaterial({
+    color: 0x2a4a66, transparent: true, opacity: 0.55, shininess: 120
+  });
+  const wsF = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.55), glassMat);
+  wsF.position.set(0, 1.45, 0.95); wsF.rotation.x = -0.4; carMesh.add(wsF);
+  const wsB = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.55), glassMat);
+  wsB.position.set(0, 1.45, -1.25); wsB.rotation.x = Math.PI + 0.4; carMesh.add(wsB);
+
+  const bar1 = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.12, 0.22),
+    new THREE.MeshBasicMaterial({ color: 0xff2222 }));
+  bar1.position.set(-0.35, 1.80, -0.1); carMesh.add(bar1);
+  const bar2 = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.12, 0.22),
+    new THREE.MeshBasicMaterial({ color: 0x2244ff }));
+  bar2.position.set(0.35, 1.80, -0.1); carMesh.add(bar2);
+  const lightR = new THREE.PointLight(0xff2222, 0, 14, 2);
+  lightR.position.set(-0.35, 1.9, -0.1); carMesh.add(lightR);
+  const lightB = new THREE.PointLight(0x3355ff, 0, 14, 2);
+  lightB.position.set(0.35, 1.9, -0.1); carMesh.add(lightB);
+
+  const hlMat = new THREE.MeshBasicMaterial({ color: 0xfff0c0 });
+  const hl1 = new THREE.Mesh(new THREE.CircleGeometry(0.17, 12), hlMat);
+  hl1.position.set(-0.62, 0.85, 2.21); carMesh.add(hl1);
+  const hl2 = new THREE.Mesh(new THREE.CircleGeometry(0.17, 12), hlMat);
+  hl2.position.set(0.62, 0.85, 2.21); carMesh.add(hl2);
+
+  const headL = new THREE.SpotLight(0xfff2cc, 0, 55, 0.55, 0.5, 1.5);
+  headL.position.set(0, 0.9, 2.2);
+  headL.target.position.set(0, -1, 30);
+  carMesh.add(headL); carMesh.add(headL.target);
+
+  const wheelMat = new THREE.MeshLambertMaterial({ color: 0x0a0a0c });
+  [[-1.02, 1.45], [1.02, 1.45], [-1.02, -1.45], [1.02, -1.45]].forEach(p => {
+    const w = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.3, 12), wheelMat);
+    w.rotation.z = Math.PI / 2;
+    w.position.set(p[0], 0.42, p[1]);
+    w.castShadow = true; carMesh.add(w);
+  });
+
+  const carHome = { x: 0, z: 34 };
+  carMesh.position.set(carHome.x, groundH(carHome.x, carHome.z), carHome.z);
+  carMesh.rotation.y = Math.PI;
+  scene.add(carMesh);
+
+  /* Валун */
+  const boulderGroup = new THREE.Group();
+  const bGeo = new THREE.DodecahedronGeometry(2.7, 1);
+  const bPos = bGeo.attributes.position;
+  for (let i = 0; i < bPos.count; i++) {
+    bPos.setXYZ(i,
+      bPos.getX(i) * rnd(0.82, 1.22),
+      bPos.getY(i) * rnd(0.85, 1.15),
+      bPos.getZ(i) * rnd(0.82, 1.22));
+  }
+  bGeo.computeVertexNormals();
+  const boulder = new THREE.Mesh(bGeo,
+    new THREE.MeshLambertMaterial({ color: 0x2a2b30, flatShading: true }));
+  boulder.position.y = 2.4; boulder.castShadow = true;
+  boulderGroup.add(boulder);
+
+  const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff2200 });
+  const eye1 = new THREE.Mesh(new THREE.SphereGeometry(0.14, 8, 8), eyeMat);
+  eye1.position.set(-0.6, 3.15, 2.35); boulderGroup.add(eye1);
+  const eye2 = eye1.clone(); eye2.position.x = 0.6; boulderGroup.add(eye2);
+  const eyeLight = new THREE.PointLight(0xff2200, 0, 14, 2);
+  eyeLight.position.set(0, 3.0, 2.5); boulderGroup.add(eyeLight);
+
+  boulderGroup.visible = false;
+  scene.add(boulderGroup);
+
+  /* Состояние */
+  const state = {
+    cluesFound: 0,
+    allFound: false,
+    time: 0,
+    carLightPhase: 0,
+    endTransition: 0,
+    driving: false,
+    driveTime: 0,
+    boulderPlaced: false,
+    crashed: false,
+    crashTimer: 0,
+    shake: 0,
+    transitioned: false,
+    _faded: false
+  };
+
+  const carPhys = {
+    x: carHome.x, z: carHome.z, yaw: 0,
+    speed: 0, maxSpeed: 26, accel: 20,
+    brakeDecel: 42, friction: 7, steerSpeed: 1.7
+  };
+  carMesh.rotation.y = carPhys.yaw + Math.PI;
+
+  player.pos.set(0, groundH(0, 25) + 1.7, 25);
+  player.yaw = 0; player.pitch = 0;
+  player.vel.set(0, 0, 0);
+  player.height = 1.7; player.speed = 5.4;
+
+  UI.setObjective('Осмотрите лес и найдите 3 зацепки');
+  UI.setClues('Зацепки: 0 / 3');
+  UI.say('<b>Лес. 23:40.</b> Супружеская пара пропала три дня назад.<br>Нужно найти хоть что-то.', 6500);
+  UI.carUI(false);
+
+  const speedEl = $('carSpeed');
+  const timerEl = $('carTimer');
+
+  function enterDriving() {
+    resetInputState();
+    state.driving = true;
+    state.driveTime = 0;
+    state.boulderPlaced = false;
+    state.crashed = false;
+    state.crashTimer = 0;
+    state.transitioned = false;
+    state._faded = false;
+
+    carPhys.x = carHome.x;
+    carPhys.z = carHome.z;
+    carPhys.yaw = 0;
+    carPhys.speed = 0;
+
+    carMesh.position.set(carPhys.x, groundH(carPhys.x, carPhys.z), carPhys.z);
+    carMesh.rotation.y = carPhys.yaw + Math.PI;
+
+    boulderGroup.visible = false;
+    eyeLight.intensity = 0;
+
+    UI.showPrompt('');
+    UI.setObjective('Выезжайте из леса');
+    UI.setClues('');
+    $('btnE').classList.remove('on');
+    $('btnE').style.display = 'none';
+    Compass.hide();
+    UI.carUI(true);
+
+    joy.active = false; joy.id = null;
+    $('joy').style.display = 'none';
+
+    headL.intensity = 2.2;
+    speedEl.textContent = '0 КМ/Ч';
+    timerEl.textContent = 'ЧЕРЕЗ 5.0…';
+
+    UI.say('<b>Едем в участок.</b>', 3000);
+  }
+
+  function triggerCrash() {
+    state.crashed = true;
+    state.crashTimer = 0;
+    state.shake = 1.0;
+    UI.flashDamage();
+    UI.say('<b>УДАР!</b>', 1800);
+    $('carTimer').classList.remove('on');
+  }
+
+  function updateDriving(dt) {
+    if (state.transitioned) return;
+    state.driveTime += dt;
+    const remain = Math.max(0, 5.0 - state.driveTime);
+
+    let inLeft  = carBtns.left || keys['KeyA'] || keys['ArrowLeft'];
+    let inRight = carBtns.right || keys['KeyD'] || keys['ArrowRight'];
+    let inGas   = carBtns.gas || keys['KeyW'] || keys['ArrowUp'];
+    let inBrake = carBtns.brake || keys['KeyS'] || keys['ArrowDown'];
+
+    if (!state.crashed) {
+      if (inGas) carPhys.speed += carPhys.accel * dt;
+      else if (inBrake) carPhys.speed -= carPhys.brakeDecel * dt;
+      else {
+        if (carPhys.speed > 0) carPhys.speed = Math.max(0, carPhys.speed - carPhys.friction * dt);
+        else if (carPhys.speed < 0) carPhys.speed = Math.min(0, carPhys.speed + carPhys.friction * dt);
+      }
+      carPhys.speed = clamp(carPhys.speed, -carPhys.maxSpeed * 0.4, carPhys.maxSpeed);
+
+      const speedFactor = Math.min(Math.abs(carPhys.speed) / 6, 1);
+      if (inLeft)  carPhys.yaw += carPhys.steerSpeed * dt * speedFactor;
+      if (inRight) carPhys.yaw -= carPhys.steerSpeed * dt * speedFactor;
+
+      carPhys.x += -Math.sin(carPhys.yaw) * carPhys.speed * dt;
+      carPhys.z += -Math.cos(carPhys.yaw) * carPhys.speed * dt;
+      carPhys.x = clamp(carPhys.x, -140, 140);
+      carPhys.z = clamp(carPhys.z, -140, 100);
+
+      carMesh.position.set(carPhys.x, groundH(carPhys.x, carPhys.z) + 0.05, carPhys.z);
+      carMesh.rotation.y = carPhys.yaw + Math.PI;
+
+      state.carLightPhase += dt * 5;
+      const ph = state.carLightPhase % 2;
+      lightR.intensity = ph < 1 ? 1.6 : 0;
+      lightB.intensity = ph < 1 ? 0 : 1.6;
+
+      const speedBob = Math.min(Math.abs(carPhys.speed) / 22, 1);
+      const bobY = Math.sin(state.time * 10) * 0.008 * speedBob;
+      const bobX = Math.cos(state.time * 8)  * 0.006 * speedBob;
+      const sinY = Math.sin(carPhys.yaw), cosY = Math.cos(carPhys.yaw);
+
+      camera.position.set(
+        carPhys.x + bobX * cosY,
+        1.18 + bobY,
+        carPhys.z - bobX * sinY
+      );
+      camera.rotation.set(0, carPhys.yaw, 0);
+
+      player.pos.set(carPhys.x, 1.18, carPhys.z);
+      player.yaw = carPhys.yaw;
+
+      const kmh = Math.round(Math.abs(carPhys.speed) * 3.6);
+      speedEl.textContent = kmh + ' КМ/Ч';
+      timerEl.textContent = remain > 0
+        ? 'ЧЕРЕЗ ' + remain.toFixed(1) + '…'
+        : 'ЧТО-ТО ПРИБЛИЖАЕТСЯ…';
+    }
+
+    if (!state.boulderPlaced && state.driveTime >= 5.0) {
+      state.boulderPlaced = true;
+      const fx = -Math.sin(carPhys.yaw), fz = -Math.cos(carPhys.yaw);
+      boulderGroup.position.set(carPhys.x + fx * 24, 0, carPhys.z + fz * 24);
+      boulderGroup.visible = true;
+      eyeLight.intensity = 2.4;
+      UI.flashDamage();
+      UI.say('<b>Что это?!</b> Прямо на дороге…', 2500);
+    }
+
+    if (state.boulderPlaced && !state.crashed) {
+      const dx = carPhys.x - boulderGroup.position.x;
+      const dz = carPhys.z - boulderGroup.position.z;
+      const dist = Math.hypot(dx, dz);
+
+      if (dist > 0.01) {
+        const move = (6 + (24 - Math.min(dist, 24)) * 0.5) * dt;
+        boulderGroup.position.x += (dx / dist) * move;
+        boulderGroup.position.z += (dz / dist) * move;
+      }
+      boulder.rotation.y += dt * 0.6;
+      boulderGroup.rotation.y = Math.atan2(dx, dz);
+      eyeLight.intensity = 1.8 + Math.sin(state.time * 9) * 0.9;
+
+      if (dist < 3.4) triggerCrash();
+    }
+
+    if (state.crashed) {
+      state.crashTimer += dt;
+      carPhys.speed = Math.max(0, carPhys.speed - dt * 34);
+      if (carPhys.speed > 0.05) {
+        carPhys.x += -Math.sin(carPhys.yaw) * carPhys.speed * dt;
+        carPhys.z += -Math.cos(carPhys.yaw) * carPhys.speed * dt;
+        carMesh.position.set(carPhys.x, groundH(carPhys.x, carPhys.z) + 0.05, carPhys.z);
+      }
+
+      state.shake = Math.max(0, state.shake - dt * 0.55);
+      const s = state.shake;
+      camera.position.set(
+        carPhys.x + rnd(-1, 1) * s * 0.6,
+        1.18 + rnd(-1, 1) * s * 0.5,
+        carPhys.z + rnd(-1, 1) * s * 0.35
+      );
+      camera.rotation.set(
+        rnd(-1, 1) * s * 0.4,
+        carPhys.yaw + rnd(-1, 1) * s * 0.35,
+        rnd(-1, 1) * s * 0.55
+      );
+
+      if (state.crashTimer > 1.4 && !state._faded) {
+        state._faded = true;
+        UI.carUI(false);
+        UI.fadeIn(1800);
+        UI.clearSay();
+      }
+      if (state.crashTimer > 3.4 && !state.transitioned) {
+        state.transitioned = true;
+        setTimeout(() => {
+          UI.say('<b>...</b>', 3000);
+          setTimeout(startHouseLevel, 2600);
+        }, 300);
+      }
+    }
+  }
+
+  function update(dt) {
+    state.time += dt;
+
+    if (state.driving) {
+      updateDriving(dt);
+      return;
+    }
+
+    updatePlayerMovement(dt, {
+      floorY: (x, z) => groundH(x, z),
+      collide: (nx, nz) => {
+        nx = clamp(nx, -135, 135);
+        nz = clamp(nz, -135, 100);
+        for (let i = 0; i < treePositions.length; i++) {
+          const t = treePositions[i];
+          const dx = nx - t.x, dz = nz - t.z;
+          const d2 = dx * dx + dz * dz;
+          const rr = t.r + 0.42;
+          if (d2 < rr * rr && d2 > 0.0001) {
+            const d = Math.sqrt(d2);
+            nx = t.x + dx / d * rr;
+            nz = t.z + dz / d * rr;
+          }
+        }
+        return { x: nx, z: nz };
+      }
+    });
+
+    let nearest = null, nearestDist = 999;
+    clueObjects.forEach(co => {
+      if (co.collected) return;
+      const pulse = 1 + Math.sin(state.time * 2.4 + co.idx * 2) * 0.16;
+      co.ring.scale.setScalar(pulse);
+      co.ring.material.opacity = 0.28 + Math.sin(state.time * 2.4 + co.idx * 2) * 0.16;
+      co.beam.material.opacity = 0.05 + Math.sin(state.time * 1.7 + co.idx) * 0.035 + 0.05;
+      co.pl.intensity = 0.65 + Math.sin(state.time * 3 + co.idx) * 0.3;
+      co.group.children[0].rotation.y += dt * 0.7;
+      const d = Math.hypot(player.pos.x - co.data.pos.x, player.pos.z - co.data.pos.z);
+      if (d < 3.6 && d < nearestDist) { nearest = co; nearestDist = d; }
+    });
+
+    state.carLightPhase += dt * 4.2;
+    const ph = state.carLightPhase % 2;
+    lightR.intensity = ph < 1 ? 1.6 : 0;
+    lightB.intensity = ph < 1 ? 0 : 1.6;
+    bar1.material.color.setHex(ph < 1 ? 0xff2222 : 0x441111);
+    bar2.material.color.setHex(ph < 1 ? 0x111144 : 0x2244ff);
+
+    if (nearest && !state.endTransition) {
+      UI.showPrompt(IS_TOUCH ? 'НАЖМИТЕ  E  —  ВЗЯТЬ УЛИКУ' : '[E]  Взять: ' + nearest.data.label);
+      $('btnE').classList.add('on');
+      if (interactQueued) {
+        nearest.collected = true;
+        scene.remove(nearest.group);
+        state.cluesFound++;
+        interactQueued = false;
+        UI.setClues('Зацепки: ' + state.cluesFound + ' / 3');
+        UI.flashDamage();
+        UI.say('<b>Улика найдена:</b> ' + nearest.data.label + '. Упаковано в пакет.', 3200);
+        if (state.cluesFound >= 3) {
+          state.allFound = true;
+          UI.setObjective('Все улики собраны. Вернитесь к машине');
+          UI.say('<b>Это всё.</b> Пора отвезти улики в участок.', 4800);
+        } else {
+          UI.setObjective('Найдено ' + state.cluesFound + ' из 3 зацепок');
+        }
+      }
+    } else if (!state.allFound) {
+      UI.showPrompt(''); $('btnE').classList.remove('on');
+    }
+
+    if (state.allFound) {
+      const dCar = Math.hypot(player.pos.x - carHome.x, player.pos.z - carHome.z);
+      if (dCar < 4.5) {
+        UI.showPrompt(IS_TOUCH ? 'НАЖМИТЕ  E  —  СЕСТЬ ЗА РУЛЬ' : '[E]  Сесть за руль');
+        $('btnE').classList.add('on');
+        if (interactQueued) {
+          interactQueued = false;
+          enterDriving();
+          return;
+        }
+      } else {
+        UI.showPrompt(''); $('btnE').classList.remove('on');
+      }
+    }
+
+    moon.position.set(player.pos.x - 30, 48, player.pos.z + 22);
+    moon.target.position.set(player.pos.x, 0, player.pos.z);
+    moon.target.updateMatrixWorld();
+
+    if (!state.allFound) {
+      let tx = null, tz = null, td = 1e9;
+      for (const co of clueObjects) {
+        if (co.collected) continue;
+        const d = Math.hypot(player.pos.x - co.data.pos.x, player.pos.z - co.data.pos.z);
+        if (d < td) { td = d; tx = co.data.pos.x; tz = co.data.pos.z; }
+      }
+      if (tx !== null) Compass.point(tx, tz, 'ЗАЦЕПКА');
+      else Compass.hide();
+    } else {
+      Compass.point(carHome.x, carHome.z, 'МАШИНА');
+    }
+  }
+
+  return {
+    update, scene, name: 'forest',
+    getDriving: () => state.driving
+  };
+}
+
+/* ===========================================================================
+   УРОВЕНЬ 2 — ДОМ
+   =========================================================================== */
+function startHouseLevel() {
+  resetInputState();
+  /* ГЛАВНЫЙ ФИКС: присваиваем новый уровень! */
+  currentLevel = buildHouseLevel();
+  gameMode = 'play';
+  UI.fadeOut(2200);
+  UI.gameplay(true);
+  UI.carUI(false);
+}
+
+function buildHouseLevel() {
+  clearScene();
+
+  scene.fog = new THREE.Fog(0x0a0a0c, 3, 34);
+  scene.background = new THREE.Color(0x050507);
+  scene.add(new THREE.AmbientLight(0x1a1a22, 0.42));
+
+  const ROOM_W = 14, ROOM_D = 12, ROOM_H = 3.4;
+
+  /* Пол */
+  const floor = new THREE.Mesh(
+    new THREE.PlaneGeometry(ROOM_W, ROOM_D),
+    new THREE.MeshLambertMaterial({ color: 0x3a2a1c })
+  );
+  floor.rotation.x = -Math.PI / 2;
+  floor.receiveShadow = true;
+  scene.add(floor);
+
+  for (let i = 0; i < 22; i++) {
+    const line = new THREE.Mesh(
+      new THREE.PlaneGeometry(ROOM_W, 0.025),
+      new THREE.MeshBasicMaterial({ color: 0x241a10, transparent: true, opacity: 0.6 })
+    );
+    line.rotation.x = -Math.PI / 2;
+    line.position.set(0, 0.003, -ROOM_D / 2 + i * (ROOM_D / 22));
+    scene.add(line);
+  }
+
+  /* Потолок */
+  const ceil = new THREE.Mesh(
+    new THREE.PlaneGeometry(ROOM_W, ROOM_D),
+    new THREE.MeshLambertMaterial({ color: 0x1a1a1e })
+  );
+  ceil.rotation.x = Math.PI / 2;
+  ceil.position.y = ROOM_H;
+  scene.add(ceil);
+
+  /* Стены */
+  const wallMat = new THREE.MeshLambertMaterial({ color: 0x2a2620 });
+  function wall(w, h, x, y, z, ry) {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), wallMat);
+    m.position.set(x, y, z); m.rotation.y = ry;
+    m.receiveShadow = true; scene.add(m);
+  }
+  wall(ROOM_W, ROOM_H, 0, ROOM_H/2, -ROOM_D/2, 0);
+  wall(ROOM_W, ROOM_H, 0, ROOM_H/2,  ROOM_D/2, Math.PI);
+  wall(ROOM_D, ROOM_H, -ROOM_W/2, ROOM_H/2, 0,  Math.PI/2);
+  wall(ROOM_D, ROOM_H,  ROOM_W/2, ROOM_H/2, 0, -Math.PI/2);
+
+  /* Плинтус */
+  const skirtMat = new THREE.MeshLambertMaterial({ color: 0x1a1510 });
+  [[0, -ROOM_D/2+0.06, ROOM_W, 0], [0, ROOM_D/2-0.06, ROOM_W, 0],
+   [-ROOM_W/2+0.06, 0, 0.12, Math.PI/2], [ROOM_W/2-0.06, 0, 0.12, Math.PI/2]]
+  .forEach(p => {
+    const g = (p[3] === 0)
+      ? new THREE.BoxGeometry(p[2], 0.18, 0.1)
+      : new THREE.BoxGeometry(0.1, 0.18, ROOM_D);
+    const m = new THREE.Mesh(g, skirtMat);
+    m.position.set(p[0], 0.09, p[1]); scene.add(m);
+  });
+
+  /* Окно */
+  const winFrameMat = new THREE.MeshLambertMaterial({ color: 0x1a1510 });
+  const winX = -ROOM_W/2 + 0.08, winY = 1.85, winZ = -1.0;
+  const hole = new THREE.Mesh(
+    new THREE.PlaneGeometry(2.4, 1.7),
+    new THREE.MeshBasicMaterial({ color: 0x1a3050 })
+  );
+  hole.rotation.y = Math.PI / 2;
+  hole.position.set(winX + 0.02, winY, winZ);
+  scene.add(hole);
+
+  const moonBeam = new THREE.SpotLight(0x88aaff, 1.4, 22, 0.55, 0.7, 1.4);
+  moonBeam.position.set(winX - 1.2, winY + 1.6, winZ);
+  moonBeam.target.position.set(3, 0, 1.5);
+  scene.add(moonBeam); scene.add(moonBeam.target);
+
+  const wF1 = new THREE.Mesh(new THREE.BoxGeometry(0.1, 2.0, 0.12), winFrameMat);
+  wF1.position.set(winX + 0.03, winY, winZ - 1.28); scene.add(wF1);
+  const wF2 = wF1.clone(); wF2.position.z = winZ + 1.28; scene.add(wF2);
+  const wF3 = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.12, 2.7), winFrameMat);
+  wF3.position.set(winX + 0.03, winY + 0.9, winZ); scene.add(wF3);
+  const wF4 = wF3.clone(); wF4.position.y = winY - 0.9; scene.add(wF4);
+  const wF5 = new THREE.Mesh(new THREE.BoxGeometry(0.08, 1.85, 0.08), winFrameMat);
+  wF5.position.set(winX + 0.04, winY, winZ); scene.add(wF5);
+  const wF6 = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 2.5), winFrameMat);
+  wF6.position.set(winX + 0.04, winY, winZ); scene.add(wF6);
+
+  /* Кровать */
+  const bedGroup = new THREE.Group();
+  const bedFrame = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.35, 2.3),
+    new THREE.MeshLambertMaterial({ color: 0x2e2016 }));
+  bedFrame.position.y = 0.35; bedFrame.castShadow = true; bedGroup.add(bedFrame);
+  const mattress = new THREE.Mesh(new THREE.BoxGeometry(1.42, 0.22, 2.2),
+    new THREE.MeshLambertMaterial({ color: 0x4a4a52 }));
+  mattress.position.y = 0.62; bedGroup.add(mattress);
+  const pillow = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.16, 0.45),
+    new THREE.MeshLambertMaterial({ color: 0x6a6a74 }));
+  pillow.position.set(0, 0.78, -0.82); bedGroup.add(pillow);
+  const blanket = new THREE.Mesh(new THREE.BoxGeometry(1.45, 0.09, 1.4),
+    new THREE.MeshLambertMaterial({ color: 0x33262a }));
+  blanket.position.set(0, 0.77, 0.42); bedGroup.add(blanket);
+  bedGroup.position.set(-4.6, 0, -3.6);
+  bedGroup.rotation.y = Math.PI / 2;
+  scene.add(bedGroup);
+
+  /* Стол */
+  const tableGroup = new THREE.Group();
+  const tableTop = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.09, 1.1),
+    new THREE.MeshLambertMaterial({ color: 0x3d2c1c }));
+  tableTop.position.y = 0.9; tableTop.castShadow = true; tableGroup.add(tableTop);
+  const legMat = new THREE.MeshLambertMaterial({ color: 0x2a1e12 });
+  [[-0.88,-0.45],[0.88,-0.45],[-0.88,0.45],[0.88,0.45]].forEach(p => {
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.9, 0.1), legMat);
+    leg.position.set(p[0], 0.45, p[1]);
+    leg.castShadow = true; tableGroup.add(leg);
+  });
+  tableGroup.position.set(3.2, 0, -2.0);
+  scene.add(tableGroup);
+
+  /* Стул */
+  const chairGroup = new THREE.Group();
+  const seat = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.08, 0.55),
+    new THREE.MeshLambertMaterial({ color: 0x3a2a1a }));
+  seat.position.y = 0.52; chairGroup.add(seat);
+  const back = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.62, 0.07),
+    new THREE.MeshLambertMaterial({ color: 0x3a2a1a }));
+  back.position.set(0, 0.85, -0.24); chairGroup.add(back);
+  const cLegMat = new THREE.MeshLambertMaterial({ color: 0x241a10 });
+  [[-0.22,-0.22],[0.22,-0.22],[-0.22,0.22],[0.22,0.22]].forEach(p => {
+    const l = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.52, 0.06), cLegMat);
+    l.position.set(p[0], 0.26, p[1]); chairGroup.add(l);
+  });
+  chairGroup.position.set(3.2, 0, -0.4);
+  chairGroup.rotation.y = Math.PI;
+  scene.add(chairGroup);
+
+  /* Свеча */
+  const candleGroup = new THREE.Group();
+  const candle = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.06, 0.3, 10),
+    new THREE.MeshLambertMaterial({ color: 0xded4b8 }));
+  candle.position.y = 0.15; candleGroup.add(candle);
+  const flame = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 8),
+    new THREE.MeshBasicMaterial({ color: 0xffcc66 }));
+  flame.position.y = 0.33; flame.scale.y = 1.7; candleGroup.add(flame);
+  const candleLight = new THREE.PointLight(0xffaa44, 1.5, 9, 2);
+  candleLight.position.y = 0.36; candleGroup.add(candleLight);
+  candleGroup.position.set(3.2, 0.945, -2.0);
+  scene.add(candleGroup);
+
+  /* Картина */
+  const paintFrame = new THREE.Mesh(new THREE.BoxGeometry(1.3, 1.0, 0.06),
+    new THREE.MeshLambertMaterial({ color: 0x1a1208 }));
+  paintFrame.position.set(0, 2.0, -ROOM_D/2 + 0.05); scene.add(paintFrame);
+  const canvasArt = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.82),
+    new THREE.MeshBasicMaterial({ color: 0x3a2a1a }));
+  canvasArt.position.set(0, 2.0, -ROOM_D/2 + 0.09); scene.add(canvasArt);
+
+  /* Записка */
+  const noteGroup = new THREE.Group();
+  const note = new THREE.Mesh(new THREE.PlaneGeometry(0.32, 0.44),
+    new THREE.MeshBasicMaterial({ color: 0xd8cfb0, side: THREE.DoubleSide }));
+  note.rotation.x = -Math.PI / 2; note.rotation.z = 0.2; note.position.y = 0.006;
+  noteGroup.add(note);
+  const noteGlow = new THREE.PointLight(0xffdd88, 0.9, 4, 2);
+  noteGlow.position.y = 0.4; noteGroup.add(noteGlow);
+  const noteRing = new THREE.Mesh(
+    new THREE.RingGeometry(0.35, 0.5, 20),
+    new THREE.MeshBasicMaterial({
+      color: 0xffdd88, transparent: true, opacity: 0.4,
+      side: THREE.DoubleSide, depthWrite: false
+    })
+  );
+  noteRing.rotation.x = -Math.PI / 2;
+  noteRing.position.y = 0.005;
+  noteGroup.add(noteRing);
+  noteGroup.position.set(3.2, 0.947, -2.0);
+  scene.add(noteGroup);
+
+  /* Дверь */
+  const doorGroup = new THREE.Group();
+  const door = new THREE.Mesh(new THREE.BoxGeometry(1.2, 2.2, 0.1),
+    new THREE.MeshLambertMaterial({ color: 0x2a1c10 }));
+  door.position.y = 1.1; doorGroup.add(door);
+  const handle = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8),
+    new THREE.MeshPhongMaterial({ color: 0x887744, shininess: 90 }));
+  handle.position.set(0.45, 1.05, 0.08); doorGroup.add(handle);
+  doorGroup.position.set(5.5, 0, ROOM_D/2 - 0.06);
+  doorGroup.rotation.y = Math.PI;
+  scene.add(doorGroup);
+
+  for (let i = 0; i < 6; i++) {
+    const paper = new THREE.Mesh(
+      new THREE.PlaneGeometry(rnd(0.18,0.3), rnd(0.22,0.36)),
+      new THREE.MeshLambertMaterial({ color: 0xa89e80 })
+    );
+    paper.rotation.x = -Math.PI / 2;
+    paper.rotation.z = rnd(0, TAU);
+    paper.position.set(rnd(-5,5), 0.004, rnd(-4,4));
+    scene.add(paper);
+  }
+
+  const shadowLight = new THREE.DirectionalLight(0xaaccff, 0.4);
+  shadowLight.position.set(-6, 8, -4);
+  shadowLight.castShadow = true;
+  shadowLight.shadow.mapSize.set(1024, 1024);
+  shadowLight.shadow.camera.left = -10;
+  shadowLight.shadow.camera.right = 10;
+  shadowLight.shadow.camera.top = 10;
+  shadowLight.shadow.camera.bottom = -10;
+  shadowLight.shadow.camera.far = 30;
+  shadowLight.shadow.bias = -0.0015;
+  scene.add(shadowLight); scene.add(shadowLight.target);
+
+  const st = {
+    time: 0,
+    wakeProgress: 0,
+    waking: true,
+    noteTaken: false,
+    endTimer: 0,
+    flicker: 0,
+    _ended: false
+  };
+
+  /* Игрок сразу в состоянии "стоит" */
+  player.pos.set(1.0, 1.68, 2.0);
+  player.yaw = Math.PI * 0.15;
+  player.pitch = 0;
+  player.vel.set(0, 0, 0);
+  player.height = 1.68;
+  player.speed = 4.5;
+
+  camera.position.set(player.pos.x, 0.55, player.pos.z);
+  camera.rotation.set(-0.35, player.yaw, 0);
+
+  UI.setObjective('');
+  UI.setClues('');
+  UI.showPrompt('');
+  $('btnE').classList.remove('on');
+  UI.say('<b>...</b><br>Где я?..', 4500);
+  Compass.hide();
+
+  const WAKE_TIME = 1.6;
+
+  function update(dt) {
+    st.time += dt;
+
+    if (st.waking) {
+      st.wakeProgress += dt / WAKE_TIME;
+
+      /* Любое движение — пропустить пробуждение */
+      const wantMove = keys['KeyW'] || keys['KeyS'] || keys['KeyA'] || keys['KeyD'] ||
+                       keys['ArrowUp'] || keys['ArrowDown'] || keys['ArrowLeft'] || keys['ArrowRight'] ||
+                       joy.active;
+      if (wantMove) st.wakeProgress = Math.max(st.wakeProgress, 0.9);
+
+      if (st.wakeProgress >= 1) {
+        st.wakeProgress = 1;
+        st.waking = false;
+        UI.setObjective('Осмотрите дом');
+        UI.say('<b>Я в каком-то доме…</b> Голова раскалывается.<br>Нужно понять, что произошло.', 5500);
+      }
+      const t = st.wakeProgress;
+      const ease = t * t * (3 - 2 * t);
+      const curY = lerp(0.55, 1.68, ease);
+      const curPitch = lerp(-0.35, 0, ease);
+
+      player.pos.y = curY;
+      player.pitch = curPitch;
+
+      camera.position.set(player.pos.x, curY, player.pos.z);
+      camera.rotation.set(player.pitch, player.yaw, Math.sin(st.time * 0.9) * 0.012 * (1 - ease));
+      Compass.hide();
+    } else {
+      updatePlayerMovement(dt, {
+        floorY: () => 0,
+        collide: (nx, nz) => {
+          const hw = ROOM_W/2 - 0.45;
+          const hd = ROOM_D/2 - 0.45;
+          nx = clamp(nx, -hw, hw);
+          nz = clamp(nz, -hd, hd);
+          if (Math.abs(nx - 3.2) < 1.35 && Math.abs(nz + 2.0) < 1.05) {
+            const dx = nx - 3.2, dz = nz + 2.0;
+            if (Math.abs(dx)/1.35 > Math.abs(dz)/1.05) nx = 3.2 + Math.sign(dx || 1) * 1.35;
+            else nz = -2.0 + Math.sign(dz || 1) * 1.05;
+          }
+          if (Math.abs(nx + 4.6) < 1.55 && Math.abs(nz + 3.6) < 1.55) {
+            const dx = nx + 4.6, dz = nz + 3.6;
+            if (Math.abs(dx) > Math.abs(dz)) nx = -4.6 + Math.sign(dx || 1) * 1.55;
+            else nz = -3.6 + Math.sign(dz || 1) * 1.55;
+          }
+          if (Math.abs(nx - 3.2) < 0.65 && Math.abs(nz + 0.4) < 0.65) {
+            const dz = nz + 0.4;
+            nz = -0.4 + Math.sign(dz || 1) * 0.65;
+          }
+          return { x: nx, z: nz };
+        }
+      });
+    }
+
+    st.flicker += dt * 11;
+    const f = 1.2 + Math.sin(st.flicker) * 0.28 + Math.sin(st.flicker * 2.7) * 0.16;
+    candleLight.intensity = f;
+    flame.scale.set(
+      1 + Math.sin(st.flicker * 1.7) * 0.12,
+      1.7 + Math.sin(st.flicker * 2.3) * 0.22,
+      1 + Math.cos(st.flicker * 1.9) * 0.12
+    );
+
+    if (!st.noteTaken && !st.waking) {
+      const d = Math.hypot(player.pos.x - 3.2, player.pos.z + 2.0);
+      const pulse = 1 + Math.sin(st.time * 3) * 0.15;
+      noteRing.scale.setScalar(pulse);
+      noteGlow.intensity = 0.7 + Math.sin(st.time * 3) * 0.4;
+
+      if (d < 2.2) {
+        UI.showPrompt(IS_TOUCH ? 'НАЖМИТЕ  E  —  ПРОЧИТАТЬ' : '[E]  Прочитать записку');
+        $('btnE').classList.add('on');
+        if (interactQueued) {
+          interactQueued = false;
+          st.noteTaken = true;
+          scene.remove(noteGroup);
+          $('btnE').classList.remove('on');
+          UI.showPrompt('');
+          UI.setObjective('');
+          Compass.hide();
+          UI.say(
+            '«Оно не человек. Оно ОГРОМНОЕ, жирное.<br>' +
+            'Мы видели его в лесу — камень, который двигался.<br>' +
+            'Оно назвалось мамой какого-то Ильдара.<br>' +
+            'Беги. Не жди.»',
+            12000
+          );
+          st.endTimer = 0.01;
+        }
+      } else {
+        UI.showPrompt(''); $('btnE').classList.remove('on');
+      }
+    }
+
+    if (st.noteTaken) {
+      st.endTimer += dt;
+      if (st.endTimer > 10.5 && !st._ended) {
+        st._ended = true;
+        UI.clearSay();
+        UI.fadeIn(2600);
+        setTimeout(showEnding, 2800);
+      }
+    } else if (!st.waking) {
+      Compass.point(3.2, -2.0, 'ЗАПИСКА');
+    }
+
+    interactQueued = false;
+  }
+
+  return { update, name: 'house', getDriving: () => false };
+}
+
+/* ---------------------------------------------------------------------------
+   ФИНАЛ
+   --------------------------------------------------------------------------- */
+function showEnding() {
+  gameMode = 'end';
+  UI.gameplay(false);
+  UI.carUI(false);
+  Compass.hide();
+  $('endText').innerHTML =
+    'Вы прочитали записку. Жирный монстр, устроивший аварию,<br>' +
+    'оказался <b>МАМОЙ ИЛЬДАРА</b>.<br>' +
+    'Она так и не отпустила вас из этого леса…<br><br>' +
+    'Улики не доехали до участка.<br>' +
+    '<span style="color:#5f7f9f">Продолжение следует…</span>';
+  $('end').classList.remove('hidden');
+  $('end').style.opacity = '1';
+}
+
+/* ---------------------------------------------------------------------------
+   ГЛАВНЫЙ ЦИКЛ
+   --------------------------------------------------------------------------- */
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.05);
+
+  if (currentLevel && gameMode !== 'end') {
+    currentLevel.update(dt);
+  }
+
+  if (renderer && scene && camera) {
+    renderer.render(scene, camera);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   СТАРТ
+   --------------------------------------------------------------------------- */
+function startGame() {
+  resetInputState();
+  enterFullscreen();
+  Compass.hide();
+  UI.carUI(false);
+  $('title').classList.add('hidden');
+  $('end').classList.add('hidden');
+  UI.fadeOut(600);
+
+  setTimeout(() => {
+    onResize();
+    resetInputState();
+    currentLevel = buildForestLevel();
+    gameMode = 'play';
+    UI.gameplay(true);
+    UI.fadeOut(900);
+    clock.getDelta();
+  }, 450);
+}
+
+function init() {
+  initEngine();
+  bindControls();
+  runLoading(() => {
+    $('startBtn').addEventListener('click', startGame);
+    $('restartBtn').addEventListener('click', () => {
+      $('end').classList.add('hidden');
+      startGame();
+    });
+  });
+  animate();
+}
+
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+  setTimeout(init, 60);
+} else {
+  document.addEventListener('DOMContentLoaded', init);
+}
+
+})();
+</script>
+</body>
+</html>
